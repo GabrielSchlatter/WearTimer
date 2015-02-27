@@ -9,14 +9,33 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.wearable.view.WatchViewStub;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
-public class MainActivity extends Activity {
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.MessageEvent;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeApi;
+import com.google.android.gms.wearable.Wearable;
+
+public class MainActivity extends Activity implements DataApi.DataListener,
+    GoogleApiClient.ConnectionCallbacks,
+    GoogleApiClient.OnConnectionFailedListener, MessageApi.MessageListener {
+
+  private static final String START_STOPWATCH_PATH = "start/stopwatch";
+  private static final String SAVE_LAP_MESSAGE = "save/laptime";
+  private static final String RESET_STOPWATCH = "reset/watch";
+  private static final String PAUSE_WATCH = "pause/watch";
 
   // Views
   private TextView tv_time;
@@ -38,11 +57,18 @@ public class MainActivity extends Activity {
   // Laps
   private ArrayList<Lap> laps = new ArrayList<>();
   private LapAdapter adapter;
+  // Wear Api
+  private GoogleApiClient googleApiClient;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
+    // Create a GoogleApiClient instance
+    googleApiClient = new GoogleApiClient.Builder(this).addApi(Wearable.API)
+        .addConnectionCallbacks(this).addOnConnectionFailedListener(this)
+        .build();
 
     handler = new Handler();
     final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
@@ -57,6 +83,20 @@ public class MainActivity extends Activity {
         initializeViews();
       }
     });
+  }
+
+  @Override
+  protected void onStart() {
+    super.onStart();
+    googleApiClient.connect();
+  }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
+    Wearable.DataApi.removeListener(googleApiClient, this);
+    Wearable.MessageApi.removeListener(googleApiClient, this);
+    googleApiClient.disconnect();
   }
 
   final Runnable updater = new Runnable() {
@@ -81,27 +121,11 @@ public class MainActivity extends Activity {
       public void onClick(View v) {
         if (!locked) {
           if (!running) {
-            // Start
-            ibStart.setImageDrawable(getResources().getDrawable(
-                R.mipmap.ic_action_playback_pause));
-            ibStart.setBackgroundColor(getResources().getColor(R.color.orange));
-            ibStop.setImageDrawable(getResources().getDrawable(
-                R.mipmap.ic_action_add));
-            ibStop.setBackgroundColor(getResources().getColor(R.color.blue));
-            StartStopWatch();
-            running = true;
+            StartStopWatch(0, true);
           }
           else {
             // Pause
-            ibStart.setImageDrawable(getResources().getDrawable(
-                R.mipmap.ic_action_playback_play));
-            ibStart.setBackgroundColor(getResources().getColor(R.color.green));
-            ibStop.setImageDrawable(getResources().getDrawable(
-                R.mipmap.ic_action_reload));
-            ibStop.setBackgroundColor(getResources()
-                .getColor(R.color.dark_blue));
-            PauseStopWatch();
-            running = false;
+            PauseStopWatch(0, true);
           }
         }
       }
@@ -112,10 +136,10 @@ public class MainActivity extends Activity {
       public void onClick(View v) {
         if (!locked) {
           if (!running) {
-            ResetStopWatch();
+            ResetStopWatch(true);
           }
           else {
-            SaveLap();
+            SaveLap(0, true);
           }
         }
       }
@@ -167,17 +191,23 @@ public class MainActivity extends Activity {
     tv_time.setText(getTimeString(updatedTime));
   }
 
-  private void SaveLap() {
-    laps.add(0, new Lap(updatedTime - lastLapTime));
+  private void SaveLap(long lapTime, boolean sendMessage) {
+
+    if (lapTime == 0)
+      lapTime = updatedTime - lastLapTime;
+
+    laps.add(0, new Lap(lapTime));
     lastLapTime = updatedTime;
     adapter.notifyDataSetChanged();
     startTime = SystemClock.uptimeMillis();
     timeInMilliseconds = 0L;
     timeSwapBuffer = 0L;
     updatedTime = 0L;
+    if (sendMessage)
+      sendMessage(SAVE_LAP_MESSAGE, Long.toString(lapTime));
   }
 
-  private void ResetStopWatch() {
+  private void ResetStopWatch(boolean sendMessage) {
     lastLapTime = 0L;
     startTime = 0L;
     timeInMilliseconds = 0L;
@@ -185,16 +215,133 @@ public class MainActivity extends Activity {
     updatedTime = 0L;
     adapter.clear();
     refreshTimeText();
+    if (sendMessage)
+      sendMessage(RESET_STOPWATCH, null);
   }
 
-  private void PauseStopWatch() {
-    timeSwapBuffer += timeInMilliseconds;
+  private void PauseStopWatch(long timeSwapBufferParam, boolean sendMessage) {
+
+    if (timeSwapBufferParam == 0)
+      timeSwapBuffer += timeInMilliseconds;
+      else
+    timeSwapBuffer = timeSwapBufferParam;
+
     handler.removeCallbacks(updater);
+
+    ibStart.setImageDrawable(getResources().getDrawable(
+        R.mipmap.ic_action_playback_play));
+    ibStart.setBackgroundColor(getResources().getColor(R.color.green));
+    ibStop.setImageDrawable(getResources().getDrawable(
+        R.mipmap.ic_action_reload));
+    ibStop.setBackgroundColor(getResources().getColor(R.color.dark_blue));
+    running = false;
+
+    if (sendMessage)
+      sendMessage(PAUSE_WATCH, Long.toString(timeSwapBuffer));
   }
 
-  private void StartStopWatch() {
-    startTime = SystemClock.uptimeMillis();
+  private void StartStopWatch(long startTimeParam, boolean sendMessage) {
+    if (startTimeParam == 0)
+      startTime = SystemClock.uptimeMillis();
+    else
+      startTime = startTimeParam;
+
     handler.post(updater);
+
+    // Start
+    ibStart.setImageDrawable(getResources().getDrawable(
+        R.mipmap.ic_action_playback_pause));
+    ibStart.setBackgroundColor(getResources().getColor(R.color.orange));
+    ibStop.setImageDrawable(getResources().getDrawable(R.mipmap.ic_action_add));
+    ibStop.setBackgroundColor(getResources().getColor(R.color.blue));
+    running = true;
+
+    if (sendMessage)
+      sendMessage(START_STOPWATCH_PATH, Long.toString(startTime));
+  }
+
+  private void sendMessage(final String path, final String text) {
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi
+            .getConnectedNodes(googleApiClient).await();
+        for (Node node : nodes.getNodes()) {
+          MessageApi.SendMessageResult result = Wearable.MessageApi
+              .sendMessage(googleApiClient, node.getId(), path,
+                  text != null ? text.getBytes() : null).await();
+        }
+      }
+    }).start();
+  }
+
+  @Override
+  public void onConnected(Bundle connectionHint) {
+    Log.d(getClass().getSimpleName(), "onConnected: " + connectionHint);
+    Toast.makeText(MainActivity.this, "Connected to Data Layer API",
+        Toast.LENGTH_SHORT).show();
+    Wearable.DataApi.addListener(googleApiClient, this);
+    Wearable.MessageApi.addListener(googleApiClient, this);
+  }
+
+  @Override
+  public void onConnectionSuspended(int cause) {
+    Log.d(getClass().getSimpleName(), "onConnectionSuspended: " + cause);
+    Toast.makeText(MainActivity.this, "Connectio to Data ayer API suspended",
+        Toast.LENGTH_SHORT).show();
+  }
+
+  @Override
+  public void onConnectionFailed(ConnectionResult connectionResult) {
+    Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
+    Toast.makeText(MainActivity.this, "Connection to Data Layer API failed",
+        Toast.LENGTH_SHORT).show();
+  }
+
+  @Override
+  public void onDataChanged(DataEventBuffer dataEvents) {
+
+  }
+
+  @Override
+  public void onMessageReceived(final MessageEvent messageEvent) {
+    Log.d(messageEvent.getPath(), "message received");
+    if (messageEvent.getPath().equals(START_STOPWATCH_PATH)) {
+      startTime = Long.valueOf(new String(messageEvent.getData()));
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          StartStopWatch(startTime, false);
+        }
+      });
+    }
+    else if (messageEvent.getPath().equals(PAUSE_WATCH)) {
+      timeSwapBuffer = Long.valueOf(new String(messageEvent.getData()));
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          PauseStopWatch(timeSwapBuffer, false);
+        }
+      });
+
+    }
+    else if (messageEvent.getPath().equals(RESET_STOPWATCH)) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          ResetStopWatch(false);
+        }
+      });
+    }
+    else if (messageEvent.getPath().equals(SAVE_LAP_MESSAGE)) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          long lapTime = Long.valueOf(new String(messageEvent.getData()));
+          SaveLap(lapTime, false);
+        }
+      });
+    }
   }
 
   public class LapAdapter extends ArrayAdapter<Lap> {
