@@ -1,4 +1,4 @@
-package com.android.gabriel.wearstopwatch;
+package com.cologne.hackaton.wearstopwatch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +28,9 @@ import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
+/**
+ * @author Dmytro Khmelenko, Gabriel Schlatter
+ */
 public class MainActivity extends Activity implements DataApi.DataListener,
     GoogleApiClient.ConnectionCallbacks,
     GoogleApiClient.OnConnectionFailedListener, MessageApi.MessageListener {

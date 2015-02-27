@@ -6,7 +6,7 @@ android {
     buildToolsVersion "21.1.2"
 
     defaultConfig {
-        applicationId "com.android.gabriel.wearstopwatch"
+        applicationId "com.cologne.hackaton.wearstopwatch"
         minSdkVersion 21
         targetSdkVersion 21
         versionCode 1
