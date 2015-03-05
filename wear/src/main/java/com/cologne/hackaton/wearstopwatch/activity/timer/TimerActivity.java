@@ -1,31 +1,42 @@
 package com.cologne.hackaton.wearstopwatch.activity.timer;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.support.wearable.view.WatchViewStub;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.NumberPicker;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.cologne.hackaton.wearstopwatch.R;
+import com.cologne.hackaton.wearstopwatch.activity.event.AttachTimerListenersEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.RequestTimerStatusEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.ResetTimerEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.StartTimerEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.StopTimerEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.TimerAlarmEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.TimerStartedEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.TimerTickEvent;
+
+import de.greenrobot.event.EventBus;
 
 /**
  * Created by admin on 3/4/2015.
  */
 public class TimerActivity extends Activity {
 
-  private static final long SECOND = 1000;
-  private static final long MINUTE = 60000;
+  private EventBus eventBus = EventBus.getDefault();
+
   boolean mIsTimerRunning;
 
   private Button mBtnStartStop;
   private NumberPicker npMinutes;
   private NumberPicker npSeconds;
 
-  private CountDownTimer mTimer;
   private int mMinutes;
   private int mSeconds;
 
@@ -33,7 +44,21 @@ public class TimerActivity extends Activity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
+    eventBus.register(this);
+
     setContentView(R.layout.activity_timer);
+
+    if (!isMyServiceRunning(TimerService.class)) {
+      Log.d(getClass().getSimpleName(), "Start Timer Srvice");
+      Intent i = new Intent(TimerActivity.this, TimerService.class);
+      startService(i);
+    }
+    else {
+      // Attach to existing Service
+      Log.d(getClass().getSimpleName(), "Attach Listeners");
+      eventBus.post(new AttachTimerListenersEvent());
+      eventBus.post(new RequestTimerStatusEvent());
+    }
 
     final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
     stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
@@ -42,6 +67,17 @@ public class TimerActivity extends Activity {
         initializeViews();
       }
     });
+  }
+
+  private boolean isMyServiceRunning(Class<?> serviceClass) {
+    ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+    for (ActivityManager.RunningServiceInfo service : manager
+        .getRunningServices(Integer.MAX_VALUE)) {
+      if (serviceClass.getName().equals(service.service.getClassName())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void initializeViews() {
@@ -64,53 +100,35 @@ public class TimerActivity extends Activity {
         if (!mIsTimerRunning) {
           mSeconds = npSeconds.getValue();
           mMinutes = npMinutes.getValue();
-          start(npSeconds.getValue() * SECOND + npMinutes.getValue() * MINUTE);
+          eventBus.post(new StartTimerEvent(mSeconds, mMinutes));
         }
         else {
-          stop();
+          eventBus.post(new StopTimerEvent());
         }
       }
     });
-
   }
 
-  private void start(long timeSpan) {
-    mTimer = new CountDownTimer(timeSpan, SECOND) {
-      @Override
-      public void onTick(long millisUntilFinished) {
-        int secs = (int) (millisUntilFinished / 1000);
-        int mins = secs / 60;
-        secs = secs % 60;
-        npMinutes.setMinValue(mins);
-        npMinutes.setMaxValue(mins);
-        npSeconds.setMinValue(secs);
-        npSeconds.setMaxValue(secs);
-      }
+  public void onEvent(TimerTickEvent event) {
+    int secs = (int) (event.getMillisUntil() / 1000);
+    int mins = secs / 60;
+    secs = secs % 60;
+    npMinutes.setEnabled(false);
+    npSeconds.setEnabled(false);
+    npMinutes.setMinValue(mins);
+    npMinutes.setMaxValue(mins);
+    npSeconds.setMinValue(secs);
+    npSeconds.setMaxValue(secs);
+  }
 
-      @Override
-      public void onFinish() {
-        reset();
-        alarm();
-      }
-    };
+  public void onEvent(TimerStartedEvent event) {
     npMinutes.setEnabled(false);
     npSeconds.setEnabled(false);
     mBtnStartStop.setText(getString(R.string.stop));
-    mTimer.start();
     mIsTimerRunning = true;
   }
 
-  private void stop() {
-    if (mTimer != null)
-      mTimer.cancel();
-    reset();
-  }
-
-  private void alarm() {
-    Toast.makeText(this, "TIMER FINISHED", Toast.LENGTH_SHORT).show();
-  }
-
-  private void reset() {
+  public void onEvent(ResetTimerEvent event) {
     npMinutes.setEnabled(true);
     npMinutes.setMaxValue(99);
     npMinutes.setMinValue(0);
@@ -121,6 +139,10 @@ public class TimerActivity extends Activity {
     npMinutes.setValue(mMinutes);
     mBtnStartStop.setText(getString(R.string.start));
     mIsTimerRunning = false;
+  }
+
+  public void onEvent(TimerAlarmEvent event) {
+    Toast.makeText(this, "ALARM!!", Toast.LENGTH_SHORT).show();
   }
 
   public class TimerFormatter implements NumberPicker.Formatter {
