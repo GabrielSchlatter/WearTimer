@@ -43,14 +43,14 @@ import de.greenrobot.event.EventBus;
 /**
  * @author Dmytro Khmelenko, Gabriel Schlatter
  */
-public class StopWatchActivity extends Activity implements DataApi.DataListener,
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, MessageApi.MessageListener {
+public class StopWatchActivity extends Activity implements
+    DataApi.DataListener, GoogleApiClient.ConnectionCallbacks,
+    GoogleApiClient.OnConnectionFailedListener, MessageApi.MessageListener {
 
-private static final String START_STOPWATCH_PATH = "start/stopwatch";
-private static final String SAVE_LAP_MESSAGE = "save/laptime";
-private static final String RESET_STOPWATCH = "reset/watch";
-private static final String PAUSE_WATCH = "pause/watch";
+  private static final String START_STOPWATCH_PATH = "start/stopwatch";
+  private static final String SAVE_LAP_MESSAGE = "save/laptime";
+  private static final String RESET_STOPWATCH = "reset/watch";
+  private static final String PAUSE_WATCH = "pause/watch";
 
   private EventBus eventBus = EventBus.getDefault();
 
@@ -69,18 +69,18 @@ private static final String PAUSE_WATCH = "pause/watch";
   private LapAdapter mLapsAdapter;
   private ListView mLapsListView;
 
-    // Wear Api
-    private GoogleApiClient mGoogleApiClient;
+  // Wear Api
+  private GoogleApiClient mGoogleApiClient;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_stopwatch);
 
-      // Create a GoogleApiClient instance
-      mGoogleApiClient = new GoogleApiClient.Builder(this).addApi(Wearable.API)
-              .addConnectionCallbacks(this).addOnConnectionFailedListener(this)
-              .build();
+    // Create a GoogleApiClient instance
+    mGoogleApiClient = new GoogleApiClient.Builder(this).addApi(Wearable.API)
+        .addConnectionCallbacks(this).addOnConnectionFailedListener(this)
+        .build();
 
     eventBus.register(this);
 
@@ -111,40 +111,39 @@ private static final String PAUSE_WATCH = "pause/watch";
     });
   }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        mGoogleApiClient.connect();
+  @Override
+  protected void onStart() {
+    super.onStart();
+    mGoogleApiClient.connect();
+  }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
+    if (!mIsRunning) {
+      Intent i = new Intent(this, StopWatchService.class);
+      stopService(i);
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (!mIsRunning) {
-            Intent i = new Intent(this, StopWatchService.class);
-            stopService(i);
+    Wearable.DataApi.removeListener(mGoogleApiClient, this);
+    Wearable.MessageApi.removeListener(mGoogleApiClient, this);
+    mGoogleApiClient.disconnect();
+  }
+
+  private void sendMessage(final String path, final String text) {
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi
+            .getConnectedNodes(mGoogleApiClient).await();
+        for (Node node : nodes.getNodes()) {
+          MessageApi.SendMessageResult result = Wearable.MessageApi
+              .sendMessage(mGoogleApiClient, node.getId(), path,
+                  text != null ? text.getBytes() : null).await();
         }
-
-        Wearable.DataApi.removeListener(mGoogleApiClient, this);
-        Wearable.MessageApi.removeListener(mGoogleApiClient, this);
-        mGoogleApiClient.disconnect();
-    }
-
-    private void sendMessage(final String path, final String text) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi
-                        .getConnectedNodes(mGoogleApiClient).await();
-                for (Node node : nodes.getNodes()) {
-                    MessageApi.SendMessageResult result = Wearable.MessageApi
-                            .sendMessage(mGoogleApiClient, node.getId(), path,
-                                    text != null ? text.getBytes() : null).await();
-                }
-            }
-        }).start();
-    }
-
+      }
+    }).start();
+  }
 
   private boolean isMyServiceRunning(Class<?> serviceClass) {
     ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -208,8 +207,8 @@ private static final String PAUSE_WATCH = "pause/watch";
     if (!mIsRunning) {
       mIsRunning = true;
 
-        // sending event START
-        sendMessage(START_STOPWATCH_PATH, null);
+      // sending event START
+      sendMessage(START_STOPWATCH_PATH, null);
 
       eventBus.post(new StartStopwatchEvent(
           new StartStopwatchEvent.StopWatchTickCallback() {
@@ -229,7 +228,7 @@ private static final String PAUSE_WATCH = "pause/watch";
           R.mipmap.ic_action_add));
       mBtnStop.setBackgroundColor(getResources().getColor(R.color.blue));
 
-        sendMessage(START_STOPWATCH_PATH, "Stopwatch timer started!");
+      sendMessage(START_STOPWATCH_PATH, "Stopwatch timer started!");
     }
     else {
 
@@ -264,8 +263,8 @@ private static final String PAUSE_WATCH = "pause/watch";
   private void handleStopButton() {
     if (!mIsRunning) {
 
-        // sending event RESET
-       sendMessage(RESET_STOPWATCH, null);
+      // sending event RESET
+      sendMessage(RESET_STOPWATCH, null);
 
       eventBus.post(new ResetStopWatchEvent());
     }
@@ -310,15 +309,16 @@ private static final String PAUSE_WATCH = "pause/watch";
         mLaps);
     mLapsListView.setAdapter(mLapsAdapter);
 
-      if(!mLaps.isEmpty()) {
+    if (!mLaps.isEmpty()) {
 
-          Lap lap = mLaps.get(0);
-          // new lap added
-          String lapData = lap.getLapNumber() + "#" + lap.getLapTime() + "#" + lap.getTimeSum();
+      Lap lap = mLaps.get(0);
+      // new lap added
+      String lapData = lap.getLapNumber() + "#" + lap.getLapTime() + "#"
+          + lap.getTimeSum();
 
-          // send event NEW LAP
-          sendMessage(SAVE_LAP_MESSAGE, lapData);
-      }
+      // send event NEW LAP
+      sendMessage(SAVE_LAP_MESSAGE, lapData);
+    }
   }
 
   public void onEvent(SaveLapsEvent event) {
@@ -352,30 +352,30 @@ private static final String PAUSE_WATCH = "pause/watch";
     }
   }
 
-    @Override
-    public void onConnected(Bundle bundle) {
-        Log.d(getClass().getSimpleName(), "onConnected: " + bundle);
-        Wearable.DataApi.addListener(mGoogleApiClient, this);
-        Wearable.MessageApi.addListener(mGoogleApiClient, this);
-    }
+  @Override
+  public void onConnected(Bundle bundle) {
+    Log.d(getClass().getSimpleName(), "onConnected: " + bundle);
+    Wearable.DataApi.addListener(mGoogleApiClient, this);
+    Wearable.MessageApi.addListener(mGoogleApiClient, this);
+  }
 
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.d(getClass().getSimpleName(), "onConnectionSuspended: " + i);
-    }
+  @Override
+  public void onConnectionSuspended(int i) {
+    Log.d(getClass().getSimpleName(), "onConnectionSuspended: " + i);
+  }
 
-    @Override
-    public void onDataChanged(DataEventBuffer dataEvents) {
+  @Override
+  public void onDataChanged(DataEventBuffer dataEvents) {
 
-    }
+  }
 
-    @Override
-    public void onMessageReceived(MessageEvent messageEvent) {
+  @Override
+  public void onMessageReceived(MessageEvent messageEvent) {
 
-    }
+  }
 
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
-    }
+  @Override
+  public void onConnectionFailed(ConnectionResult connectionResult) {
+    Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
+  }
 }

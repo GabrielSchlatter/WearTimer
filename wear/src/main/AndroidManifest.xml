@@ -30,6 +30,10 @@
             android:name=".activity.stopwatch.StopWatchService"
             android:enabled="true" />
 
+        <service
+            android:name=".activity.timer.TimerService"
+            android:enabled="true" />
+
     </application>
 
 </manifest>
