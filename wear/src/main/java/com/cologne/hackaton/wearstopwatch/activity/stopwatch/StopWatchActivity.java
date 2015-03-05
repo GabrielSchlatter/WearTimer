@@ -304,7 +304,7 @@ public class StopWatchActivity extends Activity implements
 
   public void onEvent(LapUpdateEvent event) {
     mLaps = event.getLaps();
-    Collections.reverse(mLaps);
+    Collections.sort(mLaps, new LapComparator());
     mLapsAdapter = new LapAdapter(this, android.R.layout.simple_list_item_1,
         mLaps);
     mLapsListView.setAdapter(mLapsAdapter);
