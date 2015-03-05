@@ -8,11 +8,13 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.cologne.hackaton.wearstopwatch.R;
+import com.cologne.hackaton.wearstopwatch.activity.event.RequestTimerStatusEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.ResetTimerEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StartTimerEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StopTimerEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerAlarmEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStartedEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.TimerStatusResponseEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerTickEvent;
 
 import de.greenrobot.event.EventBus;
@@ -89,5 +91,9 @@ public class TimerService extends Service {
 
   private void reset() {
     eventBus.post(new ResetTimerEvent());
+  }
+
+  public void onEvent(RequestTimerStatusEvent event) {
+    eventBus.post(new TimerStatusResponseEvent(mIsRunning));
   }
 }

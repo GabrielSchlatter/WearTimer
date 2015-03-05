@@ -13,13 +13,13 @@ import android.widget.NumberPicker;
 import android.widget.Toast;
 
 import com.cologne.hackaton.wearstopwatch.R;
-import com.cologne.hackaton.wearstopwatch.activity.event.AttachTimerListenersEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.RequestTimerStatusEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.ResetTimerEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StartTimerEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StopTimerEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerAlarmEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStartedEvent;
+import com.cologne.hackaton.wearstopwatch.activity.event.TimerStatusResponseEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerTickEvent;
 
 import de.greenrobot.event.EventBus;
@@ -48,25 +48,30 @@ public class TimerActivity extends Activity {
 
     setContentView(R.layout.activity_timer);
 
-    if (!isMyServiceRunning(TimerService.class)) {
-      Log.d(getClass().getSimpleName(), "Start Timer Srvice");
-      Intent i = new Intent(TimerActivity.this, TimerService.class);
-      startService(i);
-    }
-    else {
-      // Attach to existing Service
-      Log.d(getClass().getSimpleName(), "Attach Listeners");
-      eventBus.post(new AttachTimerListenersEvent());
-      eventBus.post(new RequestTimerStatusEvent());
-    }
-
     final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
     stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
       @Override
       public void onLayoutInflated(WatchViewStub stub) {
         initializeViews();
+
+        if (!isMyServiceRunning(TimerService.class)) {
+          Log.d(getClass().getSimpleName(), "Start Timer Service");
+          Intent i = new Intent(TimerActivity.this, TimerService.class);
+          startService(i);
+        }
+        else {
+          // Attach to existing Service
+          Log.d(getClass().getSimpleName(), "Attach Listeners");
+          eventBus.post(new RequestTimerStatusEvent());
+        }
       }
     });
+  }
+
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    eventBus.unregister(this);
   }
 
   private boolean isMyServiceRunning(Class<?> serviceClass) {
@@ -85,13 +90,13 @@ public class TimerActivity extends Activity {
     npMinutes.setMaxValue(99);
     npMinutes.setMinValue(0);
     npMinutes.setWrapSelectorWheel(false);
-    npMinutes.setFormatter(new TimerFormatter());
+   // npMinutes.setFormatter(new TimerFormatter());
 
     npSeconds = (NumberPicker) findViewById(R.id.np_seconds);
     npSeconds.setMaxValue(59);
     npSeconds.setMinValue(0);
     npSeconds.setWrapSelectorWheel(false);
-    npSeconds.setFormatter(new TimerFormatter());
+  //  npSeconds.setFormatter(new TimerFormatter());
 
     mBtnStartStop = (Button) findViewById(R.id.btn_start);
     mBtnStartStop.setOnClickListener(new View.OnClickListener() {
@@ -113,8 +118,7 @@ public class TimerActivity extends Activity {
     int secs = (int) (event.getMillisUntil() / 1000);
     int mins = secs / 60;
     secs = secs % 60;
-    npMinutes.setEnabled(false);
-    npSeconds.setEnabled(false);
+    Log.d(getClass().getSimpleName(), "Tick: " + mins + " : " + secs);
     npMinutes.setMinValue(mins);
     npMinutes.setMaxValue(mins);
     npSeconds.setMinValue(secs);
@@ -139,6 +143,22 @@ public class TimerActivity extends Activity {
     npMinutes.setValue(mMinutes);
     mBtnStartStop.setText(getString(R.string.start));
     mIsTimerRunning = false;
+  }
+
+  public void onEvent(TimerStatusResponseEvent event) {
+    if (event.isRunning()) {
+      npMinutes.setEnabled(false);
+      npSeconds.setEnabled(false);
+
+//      npSeconds.setFormatter(new TimerFormatter());
+//      npMinutes.setFormatter(new TimerFormatter());
+
+      mBtnStartStop.setText(getString(R.string.stop));
+      mIsTimerRunning = true;
+    }
+    else {
+      mIsTimerRunning = false;
+    }
   }
 
   public void onEvent(TimerAlarmEvent event) {
