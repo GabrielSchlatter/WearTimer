@@ -21,6 +21,7 @@ import com.cologne.hackaton.wearstopwatch.activity.event.TimerAlarmEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStartedEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStatusResponseEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerTickEvent;
+import com.cologne.hackaton.wearstopwatch.activity.stopwatch.StopWatchService;
 
 import de.greenrobot.event.EventBus;
 
@@ -72,6 +73,10 @@ public class TimerActivity extends Activity {
   protected void onDestroy() {
     super.onDestroy();
     eventBus.unregister(this);
+    if (!mIsTimerRunning) {
+      Intent i = new Intent(this, StopWatchService.class);
+      stopService(i);
+    }
   }
 
   private boolean isMyServiceRunning(Class<?> serviceClass) {
@@ -149,9 +154,6 @@ public class TimerActivity extends Activity {
     if (event.isRunning()) {
       npMinutes.setEnabled(false);
       npSeconds.setEnabled(false);
-
-      // npSeconds.setFormatter(new TimerFormatter());
-      // npMinutes.setFormatter(new TimerFormatter());
 
       mBtnStartStop.setText(getString(R.string.stop));
       mIsTimerRunning = true;

@@ -54,6 +54,7 @@ public class TimerService extends Service {
     super.onDestroy();
     Log.d(getClass().getSimpleName(), "Destroyed");
     eventBus.unregister(this);
+
   }
 
   public void onEvent(StartTimerEvent event) {
@@ -107,7 +108,8 @@ public class TimerService extends Service {
                 .setContentIcon(R.drawable.ic_sand)).build();
     NotificationManager notificationManger = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     notificationManger.notify(0, notif);
-   eventBus.post(new TimerAlarmEvent());
+    mIsRunning = false;
+    eventBus.post(new TimerAlarmEvent());
   }
 
   private void reset() {
