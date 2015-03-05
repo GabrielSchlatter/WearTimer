@@ -1,9 +1,5 @@
 package com.cologne.hackaton.wearstopwatch.activity.stopwatch;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
@@ -28,13 +24,33 @@ import com.cologne.hackaton.wearstopwatch.activity.event.StartStopwatchEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StatusResponseEvent;
 import com.gabriel.android.timelib.model.Lap;
 import com.gabriel.android.timelib.utils.StringUtils;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.MessageEvent;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeApi;
+import com.google.android.gms.wearable.Wearable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import de.greenrobot.event.EventBus;
 
 /**
  * @author Dmytro Khmelenko, Gabriel Schlatter
  */
-public class StopWatchActivity extends Activity {
+public class StopWatchActivity extends Activity implements DataApi.DataListener,
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, MessageApi.MessageListener {
+
+private static final String START_STOPWATCH_PATH = "start/stopwatch";
+private static final String SAVE_LAP_MESSAGE = "save/laptime";
+private static final String RESET_STOPWATCH = "reset/watch";
+private static final String PAUSE_WATCH = "pause/watch";
 
   private EventBus eventBus = EventBus.getDefault();
 
@@ -53,10 +69,18 @@ public class StopWatchActivity extends Activity {
   private LapAdapter mLapsAdapter;
   private ListView mLapsListView;
 
+    // Wear Api
+    private GoogleApiClient mGoogleApiClient;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_stopwatch);
+
+      // Create a GoogleApiClient instance
+      mGoogleApiClient = new GoogleApiClient.Builder(this).addApi(Wearable.API)
+              .addConnectionCallbacks(this).addOnConnectionFailedListener(this)
+              .build();
 
     eventBus.register(this);
 
@@ -96,6 +120,11 @@ public class StopWatchActivity extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
+        if (!mIsRunning) {
+            Intent i = new Intent(this, StopWatchService.class);
+            stopService(i);
+        }
+
         Wearable.DataApi.removeListener(mGoogleApiClient, this);
         Wearable.MessageApi.removeListener(mGoogleApiClient, this);
         mGoogleApiClient.disconnect();
@@ -114,6 +143,9 @@ public class StopWatchActivity extends Activity {
                 }
             }
         }).start();
+    }
+
+
   private boolean isMyServiceRunning(Class<?> serviceClass) {
     ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
     for (ActivityManager.RunningServiceInfo service : manager
@@ -123,15 +155,6 @@ public class StopWatchActivity extends Activity {
       }
     }
     return false;
-  }
-
-  @Override
-  protected void onStop() {
-    super.onStop();
-    if (!mIsRunning) {
-      Intent i = new Intent(this, StopWatchService.class);
-      stopService(i);
-    }
   }
 
   /**
@@ -185,10 +208,14 @@ public class StopWatchActivity extends Activity {
     if (!mIsRunning) {
       mIsRunning = true;
 
+        // sending event START
+        sendMessage(START_STOPWATCH_PATH, null);
+
       eventBus.post(new StartStopwatchEvent(
           new StartStopwatchEvent.StopWatchTickCallback() {
             @Override
             public void onTick(long elapsedTime) {
+
               String formattedTime = StringUtils.formatString(elapsedTime);
               mIimeView.setText(formattedTime);
             }
@@ -236,6 +263,10 @@ public class StopWatchActivity extends Activity {
    */
   private void handleStopButton() {
     if (!mIsRunning) {
+
+        // sending event RESET
+       sendMessage(RESET_STOPWATCH, null);
+
       eventBus.post(new ResetStopWatchEvent());
     }
     else {
@@ -278,10 +309,21 @@ public class StopWatchActivity extends Activity {
     mLapsAdapter = new LapAdapter(this, android.R.layout.simple_list_item_1,
         mLaps);
     mLapsListView.setAdapter(mLapsAdapter);
+
+      if(!mLaps.isEmpty()) {
+
+          Lap lap = mLaps.get(0);
+          // new lap added
+          String lapData = lap.getLapNumber() + "#" + lap.getLapTime() + "#" + lap.getTimeSum();
+
+          // send event NEW LAP
+          sendMessage(SAVE_LAP_MESSAGE, lapData);
+      }
   }
 
   public void onEvent(SaveLapsEvent event) {
     transferLapsToMobile(mLaps);
+
   }
 
   public void onEvent(StatusResponseEvent event) {
@@ -309,4 +351,31 @@ public class StopWatchActivity extends Activity {
       mBtnStop.setBackgroundColor(getResources().getColor(R.color.dark_blue));
     }
   }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.d(getClass().getSimpleName(), "onConnected: " + bundle);
+        Wearable.DataApi.addListener(mGoogleApiClient, this);
+        Wearable.MessageApi.addListener(mGoogleApiClient, this);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d(getClass().getSimpleName(), "onConnectionSuspended: " + i);
+    }
+
+    @Override
+    public void onDataChanged(DataEventBuffer dataEvents) {
+
+    }
+
+    @Override
+    public void onMessageReceived(MessageEvent messageEvent) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
+    }
 }
