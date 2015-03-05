@@ -263,9 +263,21 @@ public class MainActivity extends Activity implements DataApi.DataListener,
                 public void run() {
                     String[] data = new String(messageEvent.getData()).split("#");
                     Lap lap = new Lap(Integer.valueOf(data[0]), Long.valueOf(data[1]), Long.valueOf(data[2]));
-                    mLaps.add(0, lap);
 
-                    mLapsAdapter.notifyDataSetChanged();
+                    boolean existing = false;
+                    for(Lap lap1 : mLaps) {
+                        if(lap1.getLapNumber() == lap.getLapNumber()) {
+                            existing = true;
+                            break;
+                        }
+                    }
+
+                    if(!existing) {
+                        mLaps.add(0, lap);
+
+                        mLapsAdapter.notifyDataSetChanged();
+                    }
+
                 }
             });
         }
