@@ -38,7 +38,7 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     private StopWatch stopWatch;
 
     // Views
-    private TextView mIimeView;
+    //private TextView mIimeView;
     private ImageButton mBtnStart;
     private ImageButton mBtnStop;
     private ImageButton mBtnLock;
@@ -64,8 +64,8 @@ public class MainActivity extends Activity implements DataApi.DataListener,
         stopWatch = new StopWatch(new StopWatch.TimeChangedCallback() {
             @Override
             public void timeChanged(long time) {
+                // TODO Remove me
                 String formattedTime = StringUtils.formatString(time);
-                mIimeView.setText(formattedTime);
             }
         }, new StopWatch.LapsChangedCallback() {
             @Override
@@ -103,12 +103,13 @@ public class MainActivity extends Activity implements DataApi.DataListener,
      * Initializes view controls
      */
     private void initializeViews() {
-        mIimeView = (TextView) findViewById(R.id.tv_time);
-
         ListView mLapsListView = (ListView) findViewById(R.id.lv_laps);
         mLapsAdapter = new LapAdapter(this, android.R.layout.simple_list_item_1,
                 mLaps);
         mLapsListView.setAdapter(mLapsAdapter);
+
+        TextView emptyView = (TextView) findViewById(R.id.empty_laps_view);
+        mLapsListView.setEmptyView(emptyView);
 
         // start button
         mBtnStart = (ImageButton) findViewById(R.id.ib_start);
@@ -212,7 +213,7 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     @Override
     public void onConnected(Bundle bundle) {
         Log.d(getClass().getSimpleName(), "onConnected: " + bundle);
-        Toast.makeText(MainActivity.this, "Connected to Data Layer API",
+        Toast.makeText(MainActivity.this, "Connected with watch",
                 Toast.LENGTH_SHORT).show();
         Wearable.DataApi.addListener(mGoogleApiClient, this);
         Wearable.MessageApi.addListener(mGoogleApiClient, this);
@@ -221,7 +222,7 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     @Override
     public void onConnectionSuspended(int i) {
         Log.d(getClass().getSimpleName(), "onConnectionSuspended: " + i);
-        Toast.makeText(MainActivity.this, "Connection to Data ayer API suspended",
+        Toast.makeText(MainActivity.this, "Connection with watch suspended",
                 Toast.LENGTH_SHORT).show();
     }
 
@@ -234,15 +235,10 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     public void onMessageReceived(final MessageEvent messageEvent) {
         Log.d(messageEvent.getPath(), "message received");
         if (messageEvent.getPath().equals(START_STOPWATCH_PATH)) {
-//            mStartTime = Long.valueOf(new String(messageEvent.getData()));
-//            runOnUiThread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    startStopWatch(mStartTime, false);
-//                }
-//            });
+
+            // do nothing
         } else if (messageEvent.getPath().equals(PAUSE_WATCH)) {
-            //mTimeSwapBuffer = Long.valueOf(new String(messageEvent.getData()));
+
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -278,7 +274,7 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
-        Toast.makeText(MainActivity.this, "Connection to Data Layer API failed",
+        Toast.makeText(MainActivity.this, "Connection with Watch failed",
                 Toast.LENGTH_SHORT).show();
     }
 }
