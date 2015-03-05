@@ -20,7 +20,11 @@
 
         <activity
             android:name=".activity.stopwatch.StopWatchActivity"
-            android:label="@string/stopWatch" />
+            android:label="@string/stop_watch" />
+
+        <activity
+            android:name=".activity.timer.TimerActivity"
+            android:label="@string/timer" />
     </application>
 
 </manifest>

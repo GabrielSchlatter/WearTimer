@@ -9,6 +9,7 @@ import android.widget.RelativeLayout;
 
 import com.cologne.hackaton.wearstopwatch.R;
 import com.cologne.hackaton.wearstopwatch.activity.stopwatch.StopWatchActivity;
+import com.cologne.hackaton.wearstopwatch.activity.timer.TimerActivity;
 
 /**
  * Created by admin on 3/4/2015.
@@ -69,7 +70,8 @@ public class StartActivity extends Activity {
   }
 
   private void startTimer() {
-
+    Intent timerIntent = new Intent(this, TimerActivity.class);
+    startActivity(timerIntent);
   }
 
   private void startStopWatch() {
