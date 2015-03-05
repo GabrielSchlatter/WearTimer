@@ -248,8 +248,8 @@ public class MainActivity extends Activity implements DataApi.DataListener,
                 @Override
                 public void run() {
                     long lapTime = Long.valueOf(new String(messageEvent.getData()));
-                    mLaps.add(0, lap);
-                    saveLap(lapTime, false);
+//                    mLaps.add(0, lap);
+//                    saveLap(lapTime, false);
                 }
             });
         }
