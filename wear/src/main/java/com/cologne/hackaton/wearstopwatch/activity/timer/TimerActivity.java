@@ -90,13 +90,13 @@ public class TimerActivity extends Activity {
     npMinutes.setMaxValue(99);
     npMinutes.setMinValue(0);
     npMinutes.setWrapSelectorWheel(false);
-   // npMinutes.setFormatter(new TimerFormatter());
+    // npMinutes.setFormatter(new TimerFormatter());
 
     npSeconds = (NumberPicker) findViewById(R.id.np_seconds);
     npSeconds.setMaxValue(59);
     npSeconds.setMinValue(0);
     npSeconds.setWrapSelectorWheel(false);
-  //  npSeconds.setFormatter(new TimerFormatter());
+    // npSeconds.setFormatter(new TimerFormatter());
 
     mBtnStartStop = (Button) findViewById(R.id.btn_start);
     mBtnStartStop.setOnClickListener(new View.OnClickListener() {
@@ -150,8 +150,8 @@ public class TimerActivity extends Activity {
       npMinutes.setEnabled(false);
       npSeconds.setEnabled(false);
 
-//      npSeconds.setFormatter(new TimerFormatter());
-//      npMinutes.setFormatter(new TimerFormatter());
+      // npSeconds.setFormatter(new TimerFormatter());
+      // npMinutes.setFormatter(new TimerFormatter());
 
       mBtnStartStop.setText(getString(R.string.stop));
       mIsTimerRunning = true;
@@ -162,6 +162,16 @@ public class TimerActivity extends Activity {
   }
 
   public void onEvent(TimerAlarmEvent event) {
+    npMinutes.setEnabled(true);
+    npMinutes.setMaxValue(99);
+    npMinutes.setMinValue(0);
+    npSeconds.setEnabled(true);
+    npSeconds.setMaxValue(59);
+    npSeconds.setMinValue(0);
+    npSeconds.setValue(mSeconds);
+    npMinutes.setValue(mMinutes);
+    mBtnStartStop.setText(getString(R.string.start));
+    mIsTimerRunning = false;
     Toast.makeText(this, "ALARM!!", Toast.LENGTH_SHORT).show();
   }
 

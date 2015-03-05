@@ -1,9 +1,14 @@
 package com.cologne.hackaton.wearstopwatch.activity.timer;
 
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -86,7 +91,23 @@ public class TimerService extends Service {
   }
 
   private void alarm() {
-    eventBus.post(new TimerAlarmEvent());
+    int notificationId = 001;
+    // Build intent for notification content
+    // Intent viewIntent = new Intent(this, ViewEventActivity.class);
+    // viewIntent.putExtra(EXTRA_EVENT_ID, eventId);
+    // PendingIntent viewPendingIntent = PendingIntent.getActivity(this, 0,
+    // viewIntent, 0);
+
+    Notification notif = new Notification.Builder(getApplicationContext())
+        .setContentTitle(getString(R.string.timer_finished))
+        .setContentText("")
+        .setSmallIcon(R.drawable.ic_sand)
+        .extend(
+            new Notification.WearableExtender()
+                .setContentIcon(R.drawable.ic_sand)).build();
+    NotificationManager notificationManger = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    notificationManger.notify(0, notif);
+   eventBus.post(new TimerAlarmEvent());
   }
 
   private void reset() {
