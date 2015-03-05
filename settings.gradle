@@ -1,1 +1,1 @@
-include ':wear', ':timelib'
+include ':wear', ':timelib', ':mobile'
