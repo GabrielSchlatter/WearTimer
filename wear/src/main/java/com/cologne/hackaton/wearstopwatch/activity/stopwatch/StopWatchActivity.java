@@ -85,19 +85,33 @@ public class StopWatchActivity extends Activity implements DataApi.DataListener,
           public void lapsChanged(Lap lap) {
             if (lap != null) {
               mLaps.add(0, lap);
+                String lapData = lap.getLapNumber() + "#" + lap.getLapTime() + "#" + lap.getTimeSum();
+              sendMessage(SAVE_LAP_MESSAGE, lapData);
             }
             else {
               mLaps.clear();
+                sendMessage(RESET_STOPWATCH, "");
             }
             mLapsAdapter.notifyDataSetChanged();
-
-              // TODO
-             // sendMessage(SAVE_LAP_MESSAGE, Long.toString(lapTime));
           }
         });
       }
     });
   }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Wearable.DataApi.removeListener(mGoogleApiClient, this);
+        Wearable.MessageApi.removeListener(mGoogleApiClient, this);
+        mGoogleApiClient.disconnect();
+    }
 
     private void sendMessage(final String path, final String text) {
         new Thread(new Runnable() {
@@ -172,6 +186,7 @@ public class StopWatchActivity extends Activity implements DataApi.DataListener,
           R.mipmap.ic_action_add));
       mBtnStop.setBackgroundColor(getResources().getColor(R.color.blue));
 
+        sendMessage(START_STOPWATCH_PATH, "Stopwatch timer started!");
     }
     else {
       stopWatch.pauseStopWatch();

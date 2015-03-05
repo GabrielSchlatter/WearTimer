@@ -85,6 +85,20 @@ public class MainActivity extends Activity implements DataApi.DataListener,
                 .build();
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Wearable.DataApi.removeListener(mGoogleApiClient, this);
+        Wearable.MessageApi.removeListener(mGoogleApiClient, this);
+        mGoogleApiClient.disconnect();
+    }
+
     /**
      * Initializes view controls
      */
@@ -241,15 +255,21 @@ public class MainActivity extends Activity implements DataApi.DataListener,
                 @Override
                 public void run() {
                     stopWatch.resetStopWatch();
+
+                    // clear all data
+                    mLaps.clear();
+                    mLapsAdapter.notifyDataSetChanged();
                 }
             });
         } else if (messageEvent.getPath().equals(SAVE_LAP_MESSAGE)) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    long lapTime = Long.valueOf(new String(messageEvent.getData()));
-//                    mLaps.add(0, lap);
-//                    saveLap(lapTime, false);
+                    String[] data = new String(messageEvent.getData()).split("#");
+                    Lap lap = new Lap(Integer.valueOf(data[0]), Long.valueOf(data[1]), Long.valueOf(data[2]));
+                    mLaps.add(0, lap);
+
+                    mLapsAdapter.notifyDataSetChanged();
                 }
             });
         }
