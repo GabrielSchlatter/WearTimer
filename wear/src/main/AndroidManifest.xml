@@ -25,6 +25,11 @@
         <activity
             android:name=".activity.timer.TimerActivity"
             android:label="@string/timer" />
+
+        <service
+            android:name=".activity.stopwatch.StopWatchService"
+            android:enabled="true" />
+
     </application>
 
 </manifest>
