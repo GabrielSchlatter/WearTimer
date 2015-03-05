@@ -99,6 +99,10 @@ public class StopWatch {
     mTimeChangedCallback.timeChanged(mUpdatedTime);
   }
 
+  public long getCurrentTime() {
+    return mUpdatedTime;
+  }
+
   public boolean isRunning() {
     return mRunning;
   }
