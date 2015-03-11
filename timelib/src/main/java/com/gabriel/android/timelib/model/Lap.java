@@ -6,25 +6,52 @@ package com.gabriel.android.timelib.model;
  * @author Dmytro Khmelenko, Gabriel Schlatter
  */
 public class Lap {
-    private int lapNumber;
-    private final long lapTime;
-    private final long timeSum;
+
+    private final int mLapNumber;
+    private final long mLapTime;
+    private final long mTimeSum;
 
     public Lap(int lapNumber, long lapTime, long timeSum) {
-        this.lapNumber = lapNumber;
-        this.lapTime = lapTime;
-        this.timeSum = timeSum;
+        this.mLapNumber = lapNumber;
+        this.mLapTime = lapTime;
+        this.mTimeSum = timeSum;
     }
 
     public long getLapTime() {
-        return lapTime;
+        return mLapTime;
     }
 
     public long getTimeSum() {
-        return timeSum;
+        return mTimeSum;
     }
 
     public int getLapNumber() {
-        return lapNumber;
+        return mLapNumber;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+        if (obj == null || obj.getClass() != this.getClass()) {
+            return false;
+        }
+        Lap that = (Lap) obj;
+        return mLapNumber == that.mLapNumber
+                && mLapTime == that.mLapTime
+                && mTimeSum == that.mTimeSum;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + Long.valueOf(mLapNumber).hashCode();
+        result = prime * result + Long.valueOf(mLapTime).hashCode();
+        result = prime * result + Long.valueOf(mTimeSum).hashCode();
+        return result;
+    }
+
+
 }

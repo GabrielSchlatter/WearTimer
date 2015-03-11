@@ -1,8 +1,5 @@
 package com.cologne.hackaton.wearstopwatch.activity.stopwatch;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
@@ -20,93 +17,143 @@ import com.cologne.hackaton.wearstopwatch.activity.event.StatusResponseEvent;
 import com.gabriel.android.timelib.StopWatch;
 import com.gabriel.android.timelib.model.Lap;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import de.greenrobot.event.EventBus;
 
 /**
- * Created by gabriel on 3/5/2015.
+ * Service for Stopwatch work
+ *
+ * @author Dmytro Khmelenko, Gabriel Schlatter
  */
 public class StopWatchService extends Service {
 
-  private EventBus eventBus = EventBus.getDefault();
-  private StopWatch stopWatch;
-  private List<Lap> mLaps = new ArrayList<>();
+    private EventBus mEventBus;
 
-  private StartStopwatchEvent.StopWatchTickCallback tickCallback;
+    private StopWatch mStopWatch;
+    private List<Lap> mLaps;
 
-  @Override
-  public void onCreate() {
-    super.onCreate();
-    eventBus.register(this);
-    Log.d(getClass().getSimpleName(), "StopWatchService started");
-  }
+    private StartStopwatchEvent.StopWatchTickCallback mTickCallback;
 
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-    eventBus.unregister(this);
-    Log.d(getClass().getSimpleName(), "StopWatchService destroyed");
-  }
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        mLaps = new ArrayList<>();
 
-  public void onEvent(final StartStopwatchEvent event) {
-    Log.d(getClass().getSimpleName(), "StartStopwatchEvent");
-    tickCallback = event.getCallback();
-    if (stopWatch == null) {
-      stopWatch = new StopWatch(new StopWatch.TimeChangedCallback() {
-        @Override
-        public void timeChanged(long time) {
-          tickCallback.onTick(time);
-        }
-      }, new StopWatch.LapsChangedCallback() {
-        @Override
-        public void lapsChanged(Lap lap) {
-          if (lap != null) {
-            mLaps.add(lap);
-            eventBus.post(new LapUpdateEvent(mLaps));
-          }
-          else {
-            eventBus.post(new SaveLapsEvent());
-            mLaps.clear();
-            eventBus.post(new LapUpdateEvent(mLaps));
-          }
-        }
-      });
+        initStopwatch();
+
+        mEventBus = EventBus.getDefault();
+        mEventBus.register(this);
+
+        Log.d(getClass().getSimpleName(), "StopWatchService created");
     }
-    stopWatch.startStopWatch();
-  }
 
-  public void onEvent(PauseStopwatchEvent event) {
-    stopWatch.pauseStopWatch();
-    event.getCallback().receivePauseTime(stopWatch.getCurrentTime());
-  }
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return super.onStartCommand(intent, flags, startId);
+    }
 
-  public void onEvent(ResetStopWatchEvent event) {
-    Log.d(getClass().getSimpleName(), "ResetStopWatchEvent");
-    eventBus.post(new LapUpdateEvent(mLaps));
-    stopWatch.resetStopWatch();
-  }
+    @Override
+    public IBinder onBind(Intent arg0) {
+        return null;
+    }
 
-  public void onEvent(CreateLapEvent event) {
-    Log.d(getClass().getSimpleName(), "CreateLapEvent");
-    stopWatch.saveLap();
-  }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mEventBus.unregister(this);
+        Log.d(getClass().getSimpleName(), "StopWatchService destroyed");
+    }
 
-  public void onEvent(AttachListenersEvent event) {
-    tickCallback = event.getTickCallback();
-    eventBus.post(new LapUpdateEvent(mLaps));
-  }
+    /**
+     * Initializes stopwatch
+     */
+    private void initStopwatch() {
+        mStopWatch = new StopWatch(new StopWatch.OnTimeChangedListener() {
+            @Override
+            public void onTimeChanged(long time) {
+                if(mTickCallback != null) {
+                    mTickCallback.onTick(time);
+                }
+            }
+        }, new StopWatch.OnLapsChangeListener() {
+            @Override
+            public void onLapAdded(Lap lap) {
+                if (lap != null) {
+                    mLaps.add(lap);
+                    mEventBus.post(new LapUpdateEvent(mLaps));
+                }
+            }
 
-  public void onEvent(RequestStatusEvent event) {
-    eventBus.post(new StatusResponseEvent(stopWatch.isRunning()));
-  }
+            @Override
+            public void onLapsCleared() {
+                mEventBus.post(new SaveLapsEvent());
+                mLaps.clear();
+                mEventBus.post(new LapUpdateEvent(mLaps));
+            }
+        });
+    }
 
-  @Override
-  public int onStartCommand(Intent intent, int flags, int startId) {
-    return super.onStartCommand(intent, flags, startId);
-  }
+    /**
+     * Handles StartStopwatchEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(StartStopwatchEvent event) {
+        Log.d(getClass().getSimpleName(), "StartStopwatchEvent");
 
-  @Override
-  public IBinder onBind(Intent arg0) {
-    return null;
-  }
+        mTickCallback = event.getCallback();
+        mStopWatch.startStopWatch();
+    }
 
+    /**
+     * Handles PauseStopwatchEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(PauseStopwatchEvent event) {
+        mStopWatch.pauseStopWatch();
+        event.getCallback().receivePauseTime(mStopWatch.getCurrentTime());
+    }
+
+    /**
+     * Handles ResetStopWatchEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(ResetStopWatchEvent event) {
+        Log.d(getClass().getSimpleName(), "ResetStopWatchEvent");
+        mEventBus.post(new LapUpdateEvent(mLaps));
+        mStopWatch.resetStopWatch();
+    }
+
+    /**
+     * Handles CreateLapEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(CreateLapEvent event) {
+        Log.d(getClass().getSimpleName(), "CreateLapEvent");
+        mStopWatch.saveLap();
+    }
+
+    /**
+     * Handles AttachListenersEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(AttachListenersEvent event) {
+        mTickCallback = event.getTickCallback();
+        mEventBus.post(new LapUpdateEvent(mLaps));
+    }
+
+    /**
+     * Handles RequestStatusEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(RequestStatusEvent event) {
+        mEventBus.post(new StatusResponseEvent(mStopWatch.isRunning()));
+    }
 }

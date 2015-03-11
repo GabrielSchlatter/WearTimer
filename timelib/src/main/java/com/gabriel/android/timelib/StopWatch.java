@@ -1,118 +1,151 @@
 package com.gabriel.android.timelib;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import android.os.Handler;
 
 import com.gabriel.android.timelib.model.Lap;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Dmytro Khmelenko, Gabriel Schlatter
  */
 public class StopWatch {
 
-  // Async
-  private Handler mHandler;
-  private Runnable mUpdaterTask;
+    // Async
+    private Handler mHandler;
+    private Runnable mUpdaterTask;
 
-  // Time
-  private long mLastLapTime = 0L;
-  private long mStartTime = 0L;
-  private long mTimeInMilliseconds = 0L;
-  private long mTimeSwapBuffer = 0L;
-  private long mUpdatedTime = 0L;
+    // Time
+    private long mLastLapTime = 0L;
+    private long mStartTime = 0L;
+    private long mTimeInMilliseconds = 0L;
+    private long mTimeSwapBuffer = 0L;
+    private long mUpdatedTime = 0L;
 
-  // Laps
-  private List<Lap> mLaps = new ArrayList<>();
+    // Laps
+    private List<Lap> mLaps = new ArrayList<>();
 
-  // Callbacks
-  private TimeChangedCallback mTimeChangedCallback;
-  private LapsChangedCallback mLapsChangedCallback;
+    // Callbacks
+    private OnTimeChangedListener mOnTimeChangedListener;
+    private OnLapsChangeListener mOnLapsChangeListener;
 
-  // Status
-  private boolean mRunning;
+    // Status
+    private boolean mRunning;
 
-  public StopWatch(TimeChangedCallback timeChangedCallback,
-      LapsChangedCallback lapsChangedCallback) {
+    public StopWatch(OnTimeChangedListener onTimeChangedListener,
+                     OnLapsChangeListener onLapsChangeListener) {
 
-    mTimeChangedCallback = timeChangedCallback;
-    mLapsChangedCallback = lapsChangedCallback;
+        mOnTimeChangedListener = onTimeChangedListener;
+        mOnLapsChangeListener = onLapsChangeListener;
 
-    mHandler = new Handler();
-    mUpdaterTask = new Runnable() {
-      @Override
-      public void run() {
-        mTimeInMilliseconds = System.currentTimeMillis() - mStartTime;
-        mUpdatedTime = mLastLapTime + mTimeSwapBuffer + mTimeInMilliseconds;
-        mTimeChangedCallback.timeChanged(mUpdatedTime);
-        mHandler.postDelayed(this, 0);
-      }
-    };
-  }
+        mHandler = new Handler();
+        mUpdaterTask = new Runnable() {
+            @Override
+            public void run() {
+                mTimeInMilliseconds = System.currentTimeMillis() - mStartTime;
+                mUpdatedTime = mLastLapTime + mTimeSwapBuffer + mTimeInMilliseconds;
+                mOnTimeChangedListener.onTimeChanged(mUpdatedTime);
+                mHandler.postDelayed(this, 0);
+            }
+        };
+    }
 
-  /**
-   * Launches stop watch timer
-   */
-  public void startStopWatch() {
-    mStartTime = System.currentTimeMillis();
-    mHandler.post(mUpdaterTask);
-    mRunning = true;
-  }
+    /**
+     * Launches stop watch timer
+     */
+    public void startStopWatch() {
+        mStartTime = System.currentTimeMillis();
+        mHandler.post(mUpdaterTask);
+        mRunning = true;
+    }
 
-  /**
-   * Pauses stopwatch timer
-   */
-  public void pauseStopWatch() {
-    mTimeSwapBuffer += mTimeInMilliseconds;
-    mHandler.removeCallbacks(mUpdaterTask);
-    mRunning = false;
-  }
+    /**
+     * Pauses stopwatch timer
+     */
+    public void pauseStopWatch() {
+        mTimeSwapBuffer += mTimeInMilliseconds;
+        mHandler.removeCallbacks(mUpdaterTask);
+        mRunning = false;
+    }
 
-  /**
-   * Does saving the lap time
-   */
-  public void saveLap() {
+    /**
+     * Does saving the lap time
+     */
+    public void saveLap() {
 
-    long lapTime = mUpdatedTime - mLastLapTime;
-    Lap newLap = new Lap(mLaps.size() + 1, lapTime, mUpdatedTime);
-    mLaps.add(newLap);
-    mLastLapTime = mUpdatedTime;
-    mLapsChangedCallback.lapsChanged(newLap);
-    mStartTime = System.currentTimeMillis();
-    mTimeInMilliseconds = 0L;
-    mTimeSwapBuffer = 0L;
-    mUpdatedTime = 0L;
-  }
+        long lapTime = mUpdatedTime - mLastLapTime;
+        Lap newLap = new Lap(mLaps.size() + 1, lapTime, mUpdatedTime);
+        mLaps.add(newLap);
+        mLastLapTime = mUpdatedTime;
+        mOnLapsChangeListener.onLapAdded(newLap);
+        mStartTime = System.currentTimeMillis();
+        mTimeInMilliseconds = 0L;
+        mTimeSwapBuffer = 0L;
+        mUpdatedTime = 0L;
+    }
 
-  /**
-   * Resets stop watch timer
-   */
-  public void resetStopWatch() {
-    mLastLapTime = 0L;
-    mStartTime = 0L;
-    mTimeInMilliseconds = 0L;
-    mTimeSwapBuffer = 0L;
-    mUpdatedTime = 0L;
-    mLaps.clear();
-    mLapsChangedCallback.lapsChanged(null);
-    mTimeChangedCallback.timeChanged(mUpdatedTime);
-  }
+    /**
+     * Resets stop watch timer
+     */
+    public void resetStopWatch() {
+        mLastLapTime = 0L;
+        mStartTime = 0L;
+        mTimeInMilliseconds = 0L;
+        mTimeSwapBuffer = 0L;
+        mUpdatedTime = 0L;
+        mLaps.clear();
+        mOnLapsChangeListener.onLapsCleared();
+        mOnTimeChangedListener.onTimeChanged(mUpdatedTime);
+    }
 
-  public long getCurrentTime() {
-    return mUpdatedTime;
-  }
+    /**
+     * Gets current stopwatch time
+     *
+     * @return Stopwatch time
+     */
+    public long getCurrentTime() {
+        return mUpdatedTime;
+    }
 
-  public boolean isRunning() {
-    return mRunning;
-  }
+    /**
+     * Defines whether the stopwatch running or not
+     *
+     * @return True, if stopwatch is running. False otherwise
+     */
+    public boolean isRunning() {
+        return mRunning;
+    }
 
-  public interface TimeChangedCallback {
-    public void timeChanged(long time);
-  }
+    /**
+     * Listener for handling time changes
+     */
+    public interface OnTimeChangedListener {
 
-  public interface LapsChangedCallback {
-    public void lapsChanged(Lap lap);
-  }
+        /**
+         * Called when stopwatch time changed
+         *
+         * @param time Changed time
+         */
+        public void onTimeChanged(long time);
+    }
+
+    /**
+     * Listener for handling lap changes
+     */
+    public interface OnLapsChangeListener {
+
+        /**
+         * Called when the lap was added
+         *
+         * @param lap Added lap
+         */
+        public void onLapAdded(Lap lap);
+
+        /**
+         * Called when the laps were cleared
+         */
+        public void onLapsCleared();
+    }
 
 }

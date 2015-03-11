@@ -61,20 +61,24 @@ public class MainActivity extends Activity implements DataApi.DataListener,
         initializeViews();
 
         // Init StopWatch
-        stopWatch = new StopWatch(new StopWatch.TimeChangedCallback() {
+        stopWatch = new StopWatch(new StopWatch.OnTimeChangedListener() {
             @Override
-            public void timeChanged(long time) {
+            public void onTimeChanged(long time) {
                 // TODO Remove me
                 String formattedTime = StringUtils.formatString(time);
             }
-        }, new StopWatch.LapsChangedCallback() {
+        }, new StopWatch.OnLapsChangeListener() {
             @Override
-            public void lapsChanged(Lap lap) {
+            public void onLapAdded(Lap lap) {
                 if (lap != null) {
                     mLaps.add(0, lap);
-                } else {
-                    mLaps.clear();
                 }
+                mLapsAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onLapsCleared() {
+                mLaps.clear();
                 mLapsAdapter.notifyDataSetChanged();
             }
         });
@@ -264,14 +268,7 @@ public class MainActivity extends Activity implements DataApi.DataListener,
                     String[] data = new String(messageEvent.getData()).split("#");
                     Lap lap = new Lap(Integer.valueOf(data[0]), Long.valueOf(data[1]), Long.valueOf(data[2]));
 
-                    boolean existing = false;
-                    for(Lap lap1 : mLaps) {
-                        if(lap1.getLapNumber() == lap.getLapNumber()) {
-                            existing = true;
-                            break;
-                        }
-                    }
-
+                    boolean existing = mLaps.contains(lap);
                     if(!existing) {
                         mLaps.add(0, lap);
 
