@@ -1,8 +1,8 @@
-package com.gabriel.android.timelib;
+package com.cologne.hackaton.wearstopwatch.timelib;
 
 import android.os.Handler;
 
-import com.gabriel.android.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -8,8 +8,8 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import com.cologne.hackaton.wearstopwatch.R;
-import com.gabriel.android.timelib.model.Lap;
-import com.gabriel.android.timelib.utils.StringUtils;
+import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.StringUtils;
 
 import java.util.List;
 

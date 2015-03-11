@@ -9,9 +9,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.gabriel.android.timelib.StopWatch;
-import com.gabriel.android.timelib.model.Lap;
-import com.gabriel.android.timelib.utils.StringUtils;
+import com.cologne.hackaton.wearstopwatch.timelib.StopWatch;
+import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.StringUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;

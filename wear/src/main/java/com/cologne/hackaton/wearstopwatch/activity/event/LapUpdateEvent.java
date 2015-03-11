@@ -1,6 +1,6 @@
 package com.cologne.hackaton.wearstopwatch.activity.event;
 
-import com.gabriel.android.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
 
 import java.util.List;
 

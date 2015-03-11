@@ -1,4 +1,4 @@
-package com.gabriel.android.timelib.utils;
+package com.cologne.hackaton.wearstopwatch.timelib.utils;
 
 /**
  * Provides utility methods for the strings

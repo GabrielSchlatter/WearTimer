@@ -14,8 +14,8 @@ import com.cologne.hackaton.wearstopwatch.activity.event.ResetStopWatchEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.SaveLapsEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StartStopwatchEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StatusResponseEvent;
-import com.gabriel.android.timelib.StopWatch;
-import com.gabriel.android.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.StopWatch;
+import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
 
 import java.util.ArrayList;
 import java.util.List;

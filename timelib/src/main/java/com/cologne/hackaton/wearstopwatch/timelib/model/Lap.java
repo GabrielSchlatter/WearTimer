@@ -1,4 +1,4 @@
-package com.gabriel.android.timelib.model;
+package com.cologne.hackaton.wearstopwatch.timelib.model;
 
 /**
  * Represents lap data
