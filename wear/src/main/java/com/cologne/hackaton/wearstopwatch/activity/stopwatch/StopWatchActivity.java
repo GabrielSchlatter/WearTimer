@@ -23,6 +23,7 @@ import com.cologne.hackaton.wearstopwatch.activity.event.SaveLapsEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StartStopwatchEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.StatusResponseEvent;
 import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.SerializeUtils;
 import com.cologne.hackaton.wearstopwatch.timelib.utils.StringUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -155,21 +156,37 @@ public class StopWatchActivity extends Activity implements
         mGoogleApiClient.disconnect();
     }
 
-    private void sendMessage(final String path, final String text) {
+    /**
+     * Sends a message to the connected device
+     *
+     * @param path Message path
+     * @param text Message
+     */
+    private void sendMessage(String path, String text) {
+        byte[] data = text != null ? text.getBytes() : null;
+        sendMessage(path, data);
+    }
+
+    /**
+     * Sends a message to the connected device
+     *
+     * @param path Message path
+     * @param data Message data
+     */
+    private void sendMessage(final String path, final byte[] data) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi
                         .getConnectedNodes(mGoogleApiClient).await();
                 for (Node node : nodes.getNodes()) {
-                    byte[] data = text != null ? text.getBytes() : null;
+
                     Wearable.MessageApi
                             .sendMessage(mGoogleApiClient, node.getId(), path, data).await();
                 }
             }
         }).start();
     }
-
 
     /**
      * Initializes view controls
@@ -222,9 +239,6 @@ public class StopWatchActivity extends Activity implements
         if (!mIsRunning) {
             mIsRunning = true;
 
-            // sending connected devices message START
-            sendMessage(START_STOPWATCH_PATH, null);
-
             eventBus.post(new StartStopwatchEvent(
                     new StartStopwatchEvent.StopWatchTickCallback() {
                         @Override
@@ -243,6 +257,7 @@ public class StopWatchActivity extends Activity implements
                     R.mipmap.ic_action_add));
             mBtnStop.setBackgroundColor(getResources().getColor(R.color.blue));
 
+            // sending connected devices message START
             sendMessage(START_STOPWATCH_PATH, "Stopwatch timer started!");
         } else {
 
@@ -267,10 +282,6 @@ public class StopWatchActivity extends Activity implements
         }
     }
 
-    private void transferLapsToMobile(List<Lap> laps) {
-
-    }
-
     /**
      * Handles the action Stop
      */
@@ -278,7 +289,7 @@ public class StopWatchActivity extends Activity implements
         if (!mIsRunning) {
 
             // sending connected devices message RESET
-            sendMessage(RESET_STOPWATCH, null);
+            sendMessage(RESET_STOPWATCH, "Reset Stopwatch");
 
             eventBus.post(new ResetStopWatchEvent());
         } else {
@@ -325,22 +336,25 @@ public class StopWatchActivity extends Activity implements
                 mLaps);
         mLapsListView.setAdapter(mLapsAdapter);
 
-        if (!mLaps.isEmpty()) {
-
-            Lap lap = mLaps.get(0);
-            // new lap added
-            String lapData = lap.getLapNumber() + "#" + lap.getLapTime() + "#"
-                    + lap.getTimeSum();
-
-            // send connected devices message NEW LAP
-            sendMessage(NEW_LAP_MESSAGE, lapData);
-        }
+        // send connected devices message NEW LAP
+        byte[] data = SerializeUtils.lapsToByteArray((ArrayList<Lap>) mLaps);
+        sendMessage(NEW_LAP_MESSAGE, data);
     }
 
+    /**
+     * Handles SaveLapsEvent
+     *
+     * @param event Event data
+     */
     public void onEvent(SaveLapsEvent event) {
-        transferLapsToMobile(mLaps);
+        // do nothing
     }
 
+    /**
+     * Handles StatusResponseEvent
+     *
+     * @param event Event data
+     */
     public void onEvent(StatusResponseEvent event) {
         Log.d(getClass().getSimpleName(), event.isRunning() ? "running"
                 : "not running");

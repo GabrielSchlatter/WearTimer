@@ -1,11 +1,13 @@
 package com.cologne.hackaton.wearstopwatch.timelib.model;
 
+import java.io.Serializable;
+
 /**
  * Represents lap data
  *
  * @author Dmytro Khmelenko, Gabriel Schlatter
  */
-public class Lap {
+public class Lap implements Serializable {
 
     private final int mLapNumber;
     private final long mLapTime;

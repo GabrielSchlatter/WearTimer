@@ -8,6 +8,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.SerializeUtils;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.StringUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;
@@ -141,12 +143,11 @@ public class MainActivity extends Activity implements DataApi.DataListener,
      * @param messageEvent Event data
      */
     private void handleLapAdded(MessageEvent messageEvent) {
-        String[] data = new String(messageEvent.getData()).split("#");
-        Lap lap = new Lap(Integer.valueOf(data[0]), Long.valueOf(data[1]), Long.valueOf(data[2]));
+        ArrayList<Lap> newLaps = SerializeUtils.byteArrayToLaps(messageEvent.getData());
 
-        boolean existing = mLaps.contains(lap);
-        if (!existing) {
-            mLaps.add(0, lap);
+        if(newLaps != null) {
+            mLaps.clear();
+            mLaps.addAll(newLaps);
             mLapsAdapter.notifyDataSetChanged();
         }
     }
