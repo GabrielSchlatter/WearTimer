@@ -3,15 +3,11 @@ package com.cologne.hackaton.wearstopwatch;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.cologne.hackaton.wearstopwatch.timelib.StopWatch;
 import com.cologne.hackaton.wearstopwatch.timelib.model.Lap;
-import com.cologne.hackaton.wearstopwatch.timelib.utils.StringUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;
@@ -24,6 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Main application activity
+ *
  * @author Dmytro Khmelenko
  */
 public class MainActivity extends Activity implements DataApi.DataListener,
@@ -33,21 +31,10 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     private static final String START_STOPWATCH_PATH = "start/stopwatch";
     private static final String SAVE_LAP_MESSAGE = "save/laptime";
     private static final String RESET_STOPWATCH = "reset/watch";
-    private static final String PAUSE_WATCH = "pause/watch";
-
-    private StopWatch stopWatch;
-
-    // Views
-    //private TextView mIimeView;
-    private ImageButton mBtnStart;
-    private ImageButton mBtnStop;
-    private ImageButton mBtnLock;
-
-    // Statuses
-    private boolean mLocked;
 
     // Laps
     private List<Lap> mLaps = new ArrayList<>();
+    private ListView lapsListView;
     private LapAdapter mLapsAdapter;
 
     // Wear Api
@@ -59,29 +46,6 @@ public class MainActivity extends Activity implements DataApi.DataListener,
         setContentView(R.layout.activity_main);
 
         initializeViews();
-
-        // Init StopWatch
-        stopWatch = new StopWatch(new StopWatch.OnTimeChangedListener() {
-            @Override
-            public void onTimeChanged(long time) {
-                // TODO Remove me
-                String formattedTime = StringUtils.formatString(time);
-            }
-        }, new StopWatch.OnLapsChangeListener() {
-            @Override
-            public void onLapAdded(Lap lap) {
-                if (lap != null) {
-                    mLaps.add(0, lap);
-                }
-                mLapsAdapter.notifyDataSetChanged();
-            }
-
-            @Override
-            public void onLapsCleared() {
-                mLaps.clear();
-                mLapsAdapter.notifyDataSetChanged();
-            }
-        });
 
         // Create a GoogleApiClient instance
         mGoogleApiClient = new GoogleApiClient.Builder(this).addApi(Wearable.API)
@@ -107,111 +71,13 @@ public class MainActivity extends Activity implements DataApi.DataListener,
      * Initializes view controls
      */
     private void initializeViews() {
-        ListView mLapsListView = (ListView) findViewById(R.id.lv_laps);
+        lapsListView = (ListView) findViewById(R.id.lv_laps);
         mLapsAdapter = new LapAdapter(this, android.R.layout.simple_list_item_1,
                 mLaps);
-        mLapsListView.setAdapter(mLapsAdapter);
+        lapsListView.setAdapter(mLapsAdapter);
 
         TextView emptyView = (TextView) findViewById(R.id.empty_laps_view);
-        mLapsListView.setEmptyView(emptyView);
-
-        // start button
-        mBtnStart = (ImageButton) findViewById(R.id.ib_start);
-        mBtnStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!mLocked) {
-                    handleStartButton();
-                }
-            }
-        });
-
-        // stop button
-        mBtnStop = (ImageButton) findViewById(R.id.ib_stop);
-        mBtnStop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!mLocked) {
-                    handleStopButton();
-                }
-            }
-        });
-
-        // lock button
-        mBtnLock = (ImageButton) findViewById(R.id.ib_lock);
-        mBtnLock.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleLockAction();
-            }
-        });
-    }
-
-    /**
-     * Handles the action Start
-     */
-    private void handleStartButton() {
-        if (!stopWatch.isRunning()) {
-            stopWatch.startStopWatch();
-
-            // Change View state
-            mBtnStart.setImageDrawable(getResources().getDrawable(
-                    R.mipmap.ic_action_playback_pause));
-            mBtnStart.setBackgroundColor(getResources().getColor(R.color.orange));
-            mBtnStop.setImageDrawable(getResources().getDrawable(
-                    R.mipmap.ic_action_add));
-            mBtnStop.setBackgroundColor(getResources().getColor(R.color.blue));
-
-        } else {
-            stopWatch.pauseStopWatch();
-
-            // Change View state
-            mBtnStart.setImageDrawable(getResources().getDrawable(
-                    R.mipmap.ic_action_playback_play));
-            mBtnStart.setBackgroundColor(getResources().getColor(R.color.green));
-            mBtnStop.setImageDrawable(getResources().getDrawable(
-                    R.mipmap.ic_action_reload));
-            mBtnStop.setBackgroundColor(getResources().getColor(R.color.dark_blue));
-        }
-    }
-
-    /**
-     * Handles the action Stop
-     */
-    private void handleStopButton() {
-        if (!stopWatch.isRunning()) {
-            stopWatch.resetStopWatch();
-        } else {
-            Log.d(getClass().getSimpleName(), "save lap");
-            stopWatch.saveLap();
-        }
-    }
-
-    /**
-     * Handles the action Lock what appropriate button pressed
-     */
-    private void handleLockAction() {
-        if (!mLocked) {
-            // Lock
-            mBtnLock.setImageDrawable(getResources().getDrawable(
-                    R.mipmap.ic_action_lock_closed));
-            mBtnStop.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
-            mBtnStart.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
-            mBtnStop.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
-            mLocked = true;
-        } else {
-            // Unlock
-            mBtnLock.setImageDrawable(getResources().getDrawable(
-                    R.mipmap.ic_action_lock_open));
-            if (stopWatch.isRunning()) {
-                mBtnStop.setBackgroundColor(getResources().getColor(R.color.dark_blue));
-                mBtnStart.setBackgroundColor(getResources().getColor(R.color.orange));
-            } else {
-                mBtnStart.setBackgroundColor(getResources().getColor(R.color.green));
-                mBtnStop.setBackgroundColor(getResources().getColor(R.color.blue));
-            }
-            mLocked = false;
-        }
+        lapsListView.setEmptyView(emptyView);
     }
 
     @Override
@@ -231,59 +97,73 @@ public class MainActivity extends Activity implements DataApi.DataListener,
     }
 
     @Override
-    public void onDataChanged(DataEventBuffer dataEvents) {
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
+        Toast.makeText(MainActivity.this, "Connection with Watch failed",
+                Toast.LENGTH_SHORT).show();
+    }
 
+    @Override
+    public void onDataChanged(DataEventBuffer dataEvents) {
+        // do nothing
     }
 
     @Override
     public void onMessageReceived(final MessageEvent messageEvent) {
         Log.d(messageEvent.getPath(), "message received");
         if (messageEvent.getPath().equals(START_STOPWATCH_PATH)) {
-
-            // do nothing
-        } else if (messageEvent.getPath().equals(PAUSE_WATCH)) {
-
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    stopWatch.pauseStopWatch();
+                    handleStartStopwatch();
                 }
             });
-
         } else if (messageEvent.getPath().equals(RESET_STOPWATCH)) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    stopWatch.resetStopWatch();
-
-                    // clear all data
-                    mLaps.clear();
-                    mLapsAdapter.notifyDataSetChanged();
+                    handleResetStopwatch();
                 }
             });
         } else if (messageEvent.getPath().equals(SAVE_LAP_MESSAGE)) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    String[] data = new String(messageEvent.getData()).split("#");
-                    Lap lap = new Lap(Integer.valueOf(data[0]), Long.valueOf(data[1]), Long.valueOf(data[2]));
-
-                    boolean existing = mLaps.contains(lap);
-                    if(!existing) {
-                        mLaps.add(0, lap);
-
-                        mLapsAdapter.notifyDataSetChanged();
-                    }
-
+                    handleLapAdded(messageEvent);
                 }
             });
         }
     }
 
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(getClass().getSimpleName(), "onConnectionFailed: " + connectionResult);
-        Toast.makeText(MainActivity.this, "Connection with Watch failed",
-                Toast.LENGTH_SHORT).show();
+    /**
+     * Handles event Lap added
+     *
+     * @param messageEvent Event data
+     */
+    private void handleLapAdded(MessageEvent messageEvent) {
+        String[] data = new String(messageEvent.getData()).split("#");
+        Lap lap = new Lap(Integer.valueOf(data[0]), Long.valueOf(data[1]), Long.valueOf(data[2]));
+
+        boolean existing = mLaps.contains(lap);
+        if (!existing) {
+            mLaps.add(0, lap);
+            mLapsAdapter.notifyDataSetChanged();
+        }
     }
+
+    /**
+     * Handles event Start stopwatch
+     */
+    private void handleStartStopwatch() {
+        // do nothing
+    }
+
+    /**
+     * Handles event Reset stopwatch
+     */
+    private void handleResetStopwatch() {
+        mLaps.clear();
+        mLapsAdapter.notifyDataSetChanged();
+    }
+
 }
