@@ -22,164 +22,223 @@ import com.cologne.hackaton.wearstopwatch.activity.event.TimerStartedEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStatusResponseEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerTickEvent;
 import com.cologne.hackaton.wearstopwatch.activity.stopwatch.StopWatchService;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.TimeUtils;
 
 import de.greenrobot.event.EventBus;
 
 /**
- * Created by admin on 3/4/2015.
+ * Timer activity
+ *
+ * @author Dmytro Khmelenko, Gabriel Schlatter
  */
 public class TimerActivity extends Activity {
 
-  private EventBus eventBus = EventBus.getDefault();
+    private static final int MIN_SECONDS = 0;
+    private static final int MAX_SECONDS = 59;
+    private static final int MIN_MINUTES = 0;
+    private static final int MAX_MINUTES = 59;
 
-  boolean mIsTimerRunning;
+    private EventBus mEventBus;
 
-  private Button mBtnStartStop;
-  private NumberPicker npMinutes;
-  private NumberPicker npSeconds;
+    // views
+    private Button mBtnStartStop;
+    private NumberPicker mMinutesPicker;
+    private NumberPicker mSecondsPicker;
 
-  private int mMinutes;
-  private int mSeconds;
+    private int mMinutes;
+    private int mSeconds;
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+    boolean mIsTimerRunning;
 
-    eventBus.register(this);
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-    setContentView(R.layout.activity_timer);
+        mEventBus = EventBus.getDefault();
+        mEventBus.register(this);
 
-    final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
-    stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
-      @Override
-      public void onLayoutInflated(WatchViewStub stub) {
-        initializeViews();
+        setContentView(R.layout.activity_timer);
 
-        if (!isMyServiceRunning(TimerService.class)) {
-          Log.d(getClass().getSimpleName(), "Start Timer Service");
-          Intent i = new Intent(TimerActivity.this, TimerService.class);
-          startService(i);
-        }
-        else {
-          // Attach to existing Service
-          Log.d(getClass().getSimpleName(), "Attach Listeners");
-          eventBus.post(new RequestTimerStatusEvent());
-        }
-      }
-    });
-  }
+        final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
+        stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
+            @Override
+            public void onLayoutInflated(WatchViewStub stub) {
+                initializeViews();
 
-  @Override
-  protected void onDestroy() {
-    super.onDestroy();
-    eventBus.unregister(this);
-    if (!mIsTimerRunning) {
-      Intent i = new Intent(this, StopWatchService.class);
-      stopService(i);
+                startTimerService();
+            }
+        });
     }
-  }
 
-  private boolean isMyServiceRunning(Class<?> serviceClass) {
-    ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-    for (ActivityManager.RunningServiceInfo service : manager
-        .getRunningServices(Integer.MAX_VALUE)) {
-      if (serviceClass.getName().equals(service.service.getClassName())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private void initializeViews() {
-    npMinutes = (NumberPicker) findViewById(R.id.np_minutes);
-    npMinutes.setMaxValue(99);
-    npMinutes.setMinValue(0);
-    npMinutes.setWrapSelectorWheel(false);
-    // npMinutes.setFormatter(new TimerFormatter());
-
-    npSeconds = (NumberPicker) findViewById(R.id.np_seconds);
-    npSeconds.setMaxValue(59);
-    npSeconds.setMinValue(0);
-    npSeconds.setWrapSelectorWheel(false);
-    // npSeconds.setFormatter(new TimerFormatter());
-
-    mBtnStartStop = (Button) findViewById(R.id.btn_start);
-    mBtnStartStop.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mEventBus.unregister(this);
         if (!mIsTimerRunning) {
-          mSeconds = npSeconds.getValue();
-          mMinutes = npMinutes.getValue();
-          eventBus.post(new StartTimerEvent(mSeconds, mMinutes));
+            Intent i = new Intent(this, StopWatchService.class);
+            stopService(i);
         }
-        else {
-          eventBus.post(new StopTimerEvent());
+    }
+
+    /**
+     * Starts timer service
+     */
+    private void startTimerService() {
+        if (!isTimerServiceRunning(TimerService.class)) {
+            Log.d(getClass().getSimpleName(), "Start Timer Service");
+            Intent i = new Intent(TimerActivity.this, TimerService.class);
+            startService(i);
+        } else {
+            // Attach to existing Service
+            Log.d(getClass().getSimpleName(), "Attach Listeners");
+            mEventBus.post(new RequestTimerStatusEvent());
         }
-      }
-    });
-  }
-
-  public void onEvent(TimerTickEvent event) {
-    int secs = (int) (event.getMillisUntil() / 1000);
-    int mins = secs / 60;
-    secs = secs % 60;
-    Log.d(getClass().getSimpleName(), "Tick: " + mins + " : " + secs);
-    npMinutes.setMinValue(mins);
-    npMinutes.setMaxValue(mins);
-    npSeconds.setMinValue(secs);
-    npSeconds.setMaxValue(secs);
-  }
-
-  public void onEvent(TimerStartedEvent event) {
-    npMinutes.setEnabled(false);
-    npSeconds.setEnabled(false);
-    mBtnStartStop.setText(getString(R.string.stop));
-    mIsTimerRunning = true;
-  }
-
-  public void onEvent(ResetTimerEvent event) {
-    npMinutes.setEnabled(true);
-    npMinutes.setMaxValue(99);
-    npMinutes.setMinValue(0);
-    npSeconds.setEnabled(true);
-    npSeconds.setMaxValue(59);
-    npSeconds.setMinValue(0);
-    npSeconds.setValue(mSeconds);
-    npMinutes.setValue(mMinutes);
-    mBtnStartStop.setText(getString(R.string.start));
-    mIsTimerRunning = false;
-  }
-
-  public void onEvent(TimerStatusResponseEvent event) {
-    if (event.isRunning()) {
-      npMinutes.setEnabled(false);
-      npSeconds.setEnabled(false);
-
-      mBtnStartStop.setText(getString(R.string.stop));
-      mIsTimerRunning = true;
     }
-    else {
-      mIsTimerRunning = false;
-    }
-  }
 
-  public void onEvent(TimerAlarmEvent event) {
-    npMinutes.setEnabled(true);
-    npMinutes.setMaxValue(99);
-    npMinutes.setMinValue(0);
-    npSeconds.setEnabled(true);
-    npSeconds.setMaxValue(59);
-    npSeconds.setMinValue(0);
-    npSeconds.setValue(mSeconds);
-    npMinutes.setValue(mMinutes);
-    mBtnStartStop.setText(getString(R.string.start));
-    mIsTimerRunning = false;
-    Toast.makeText(this, "ALARM!!", Toast.LENGTH_SHORT).show();
-  }
-
-  public class TimerFormatter implements NumberPicker.Formatter {
-    public String format(int value) {
-      return String.format("%02d", value);
+    /**
+     * Checks whether timer service running or not
+     *
+     * @param serviceClass
+     * @return
+     */
+    private boolean isTimerServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager
+                .getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
-  }
+
+    /**
+     * Initializes views
+     */
+    private void initializeViews() {
+        mMinutesPicker = (NumberPicker) findViewById(R.id.np_minutes);
+        mMinutesPicker.setMinValue(MIN_MINUTES);
+        mMinutesPicker.setMaxValue(MAX_MINUTES);
+        mMinutesPicker.setWrapSelectorWheel(false);
+
+        mSecondsPicker = (NumberPicker) findViewById(R.id.np_seconds);
+        mSecondsPicker.setMinValue(MIN_SECONDS);
+        mSecondsPicker.setMaxValue(MAX_SECONDS);
+        mSecondsPicker.setWrapSelectorWheel(false);
+
+        mBtnStartStop = (Button) findViewById(R.id.btn_start);
+        mBtnStartStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!mIsTimerRunning) {
+                    mSeconds = mSecondsPicker.getValue();
+                    mMinutes = mMinutesPicker.getValue();
+                    mEventBus.post(new StartTimerEvent(mSeconds, mMinutes));
+                } else {
+                    mEventBus.post(new StopTimerEvent());
+                }
+            }
+        });
+    }
+
+    /**
+     * Handles event TimerTickEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(TimerTickEvent event) {
+        int minutes = (int) TimeUtils.getMinutes(event.getMillisUntil());
+        int secs = (int) TimeUtils.getSeconds(event.getMillisUntil());
+        Log.d(getClass().getSimpleName(), "Tick: " + minutes + " : " + secs);
+
+        mMinutesPicker.setMinValue(minutes);
+        mMinutesPicker.setMaxValue(minutes);
+        mSecondsPicker.setMinValue(secs);
+        mSecondsPicker.setMaxValue(secs);
+    }
+
+    /**
+     * Handles event TimerStartedEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(TimerStartedEvent event) {
+        onStartTimer();
+    }
+
+    /**
+     * Handles event ResetTimerEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(ResetTimerEvent event) {
+        onResetTimer();
+    }
+
+    /**
+     * Handles event TimerStatusResponseEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(TimerStatusResponseEvent event) {
+        if (event.isRunning()) {
+            onStartTimer();
+        } else {
+            mIsTimerRunning = false;
+        }
+    }
+
+    /**
+     * Handles event TimerAlarmEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(TimerAlarmEvent event) {
+        onResetTimer();
+
+        Toast.makeText(this, R.string.timer_finished, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Called on start timer
+     */
+    private void onStartTimer() {
+        mMinutesPicker.setEnabled(false);
+        mSecondsPicker.setEnabled(false);
+
+        mBtnStartStop.setText(R.string.timer_stop);
+        mIsTimerRunning = true;
+    }
+
+    /**
+     * Called on reset timer data
+     */
+    private void onResetTimer() {
+        resetMinutesPicker();
+        resetSecondsPicker();
+
+        mSecondsPicker.setValue(mSeconds);
+        mMinutesPicker.setValue(mMinutes);
+
+        mBtnStartStop.setText(R.string.timer_start);
+        mIsTimerRunning = false;
+    }
+
+    /**
+     * Resets minutes picker to default
+     */
+    private void resetMinutesPicker() {
+        mMinutesPicker.setMinValue(MIN_MINUTES);
+        mMinutesPicker.setMaxValue(MAX_MINUTES);
+        mMinutesPicker.setEnabled(true);
+    }
+
+    /**
+     * Resets seconds picket to default
+     */
+    private void resetSecondsPicker() {
+        mSecondsPicker.setMinValue(MIN_SECONDS);
+        mSecondsPicker.setMaxValue(MAX_SECONDS);
+        mSecondsPicker.setEnabled(true);
+    }
 }

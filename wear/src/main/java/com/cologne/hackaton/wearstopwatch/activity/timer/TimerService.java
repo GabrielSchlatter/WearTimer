@@ -7,10 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.cologne.hackaton.wearstopwatch.R;
 import com.cologne.hackaton.wearstopwatch.activity.event.RequestTimerStatusEvent;
@@ -21,102 +18,140 @@ import com.cologne.hackaton.wearstopwatch.activity.event.TimerAlarmEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStartedEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerStatusResponseEvent;
 import com.cologne.hackaton.wearstopwatch.activity.event.TimerTickEvent;
+import com.cologne.hackaton.wearstopwatch.timelib.utils.TimeUtils;
 
 import de.greenrobot.event.EventBus;
 
 /**
- * Created by admin on 3/5/2015.
+ * Timer activity
+ *
+ * @author Dmytro Khmelenko, Gabriel Schlatter
  */
 public class TimerService extends Service {
 
-  private EventBus eventBus = EventBus.getDefault();
+    private static final int NOTIFICATION_ID = 0;
 
-  private static final long SECOND = 1000;
-  private static final long MINUTE = 60000;
+    private EventBus mEventBus;
 
-  private CountDownTimer mTimer;
-  private boolean mIsRunning;
+    private CountDownTimer mTimer;
 
-  @Override
-  public IBinder onBind(Intent intent) {
-    return null;
-  }
+    private boolean mIsRunning;
 
-  @Override
-  public void onCreate() {
-    super.onCreate();
-    Log.d(getClass().getSimpleName(), "Started");
-    eventBus.register(this);
-  }
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-    Log.d(getClass().getSimpleName(), "Destroyed");
-    eventBus.unregister(this);
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        mEventBus = EventBus.getDefault();
+        mEventBus.register(this);
+    }
 
-  }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mEventBus.unregister(this);
+    }
 
-  public void onEvent(StartTimerEvent event) {
-    Log.d(getClass().getSimpleName(), "Start Timer");
-    start(event.getSeconds() * SECOND + event.getMinutes() * MINUTE);
-  }
+    /**
+     * Handles event StartTimerEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(StartTimerEvent event) {
+        Log.d(getClass().getSimpleName(), "Start Timer");
+        long milliseconds = TimeUtils.toMilliseconds(event.getMinutes(), event.getSeconds());
+        start(milliseconds);
+    }
 
-  public void onEvent(StopTimerEvent event) {
-    Log.d(getClass().getSimpleName(), "Stop Timer");
-    stop();
-  }
+    /**
+     * Handles event StopTimerEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(StopTimerEvent event) {
+        Log.d(getClass().getSimpleName(), "Stop Timer");
+        stop();
+    }
 
-  private void start(long timeSpan) {
-    mTimer = new CountDownTimer(timeSpan, SECOND) {
-      @Override
-      public void onTick(long millisUntilFinished) {
-        eventBus.post(new TimerTickEvent(millisUntilFinished));
-      }
+    /**
+     * Handles event RequestTimerStatusEvent
+     *
+     * @param event Event data
+     */
+    public void onEvent(RequestTimerStatusEvent event) {
+        mEventBus.post(new TimerStatusResponseEvent(mIsRunning));
+    }
 
-      @Override
-      public void onFinish() {
+    /**
+     * Starts timer action
+     *
+     * @param timeSpan Time span
+     */
+    private void start(long timeSpan) {
+        mTimer = new CountDownTimer(timeSpan, TimeUtils.SECOND) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                mEventBus.post(new TimerTickEvent(millisUntilFinished));
+            }
+
+            @Override
+            public void onFinish() {
+                reset();
+                showNotification();
+            }
+        };
+        mTimer.start();
+        mEventBus.post(new TimerStartedEvent());
+        mIsRunning = true;
+    }
+
+    /**
+     * Stops timer
+     */
+    private void stop() {
+        if (mTimer != null) {
+            mTimer.cancel();
+        }
         reset();
-        alarm();
-      }
-    };
-    mTimer.start();
-    eventBus.post(new TimerStartedEvent());
-    mIsRunning = true;
-  }
+    }
 
-  private void stop() {
-    if (mTimer != null)
-      mTimer.cancel();
-    reset();
-  }
+    /**
+     * Resets timer
+     */
+    private void reset() {
+        mEventBus.post(new ResetTimerEvent());
+    }
 
-  private void alarm() {
-    int notificationId = 001;
-    // Build intent for notification content
-    // Intent viewIntent = new Intent(this, ViewEventActivity.class);
-    // viewIntent.putExtra(EXTRA_EVENT_ID, eventId);
-    // PendingIntent viewPendingIntent = PendingIntent.getActivity(this, 0,
-    // viewIntent, 0);
+    /**
+     * Shows notification about elapsed timer
+     */
+    private void showNotification() {
+        NotificationManager notificationManger = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        Notification notification = buildNotification();
+        notificationManger.notify(NOTIFICATION_ID, notification);
 
-    Notification notif = new Notification.Builder(getApplicationContext())
-        .setContentTitle(getString(R.string.timer_finished))
-        .setContentText("")
-        .setSmallIcon(R.drawable.ic_sand)
-        .extend(
-            new Notification.WearableExtender()
-                .setContentIcon(R.drawable.ic_sand)).build();
-    NotificationManager notificationManger = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-    notificationManger.notify(0, notif);
-    mIsRunning = false;
-    eventBus.post(new TimerAlarmEvent());
-  }
+        mIsRunning = false;
+        mEventBus.post(new TimerAlarmEvent());
+    }
 
-  private void reset() {
-    eventBus.post(new ResetTimerEvent());
-  }
+    /**
+     * Builds notification object
+     *
+     * @return Notification
+     */
+    private Notification buildNotification() {
+        Notification.Builder builder = new Notification.Builder(getApplicationContext())
+                .setContentTitle(getString(R.string.timer_finished))
+                .setSmallIcon(R.drawable.ic_sand)
+                .setVibrate(new long[] { 0, 1000, 500, 1000 })
+                .extend(
+                        new Notification.WearableExtender()
+                                .setContentIcon(R.drawable.ic_sand));
 
-  public void onEvent(RequestTimerStatusEvent event) {
-    eventBus.post(new TimerStatusResponseEvent(mIsRunning));
-  }
+        return builder.build();
+    }
+
 }
