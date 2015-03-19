@@ -145,11 +145,11 @@ public class TimerService extends Service {
     private Notification buildNotification() {
         Notification.Builder builder = new Notification.Builder(getApplicationContext())
                 .setContentTitle(getString(R.string.timer_finished))
-                .setSmallIcon(R.drawable.ic_sand)
-                .setVibrate(new long[] { 0, 1000, 500, 1000 })
-                .extend(
-                        new Notification.WearableExtender()
-                                .setContentIcon(R.drawable.ic_sand));
+                .setSmallIcon(R.drawable.sandclock_gray)
+                .setVibrate(new long[]{0, 500, 500, 500})
+                .extend(new Notification.WearableExtender()
+                        .setHintHideIcon(true)
+                        .setContentIcon(R.drawable.sandclock_gray));
 
         return builder.build();
     }

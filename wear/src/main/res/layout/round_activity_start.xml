@@ -22,10 +22,10 @@
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_stopwatch"
+                android:src="@drawable/timer_white"
                 android:layout_centerInParent="true"
                 android:scaleType="centerInside"
-                android:padding="30dp"/>
+                android:padding="20dp"/>
 
             </RelativeLayout>
 
@@ -39,10 +39,10 @@
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_sand"
+                android:src="@drawable/sandclock_white"
                 android:layout_centerInParent="true"
                 android:scaleType="centerInside"
-                android:padding="30dp"/>
+                android:padding="20dp"/>
 
             </RelativeLayout>
 

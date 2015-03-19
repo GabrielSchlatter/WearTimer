@@ -99,7 +99,7 @@ public class TimerActivity extends Activity {
      * Checks whether timer service running or not
      *
      * @param serviceClass
-     * @return
+     * @return True, if service is running. False otherwise
      */
     private boolean isTimerServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -133,7 +133,9 @@ public class TimerActivity extends Activity {
                 if (!mIsTimerRunning) {
                     mSeconds = mSecondsPicker.getValue();
                     mMinutes = mMinutesPicker.getValue();
-                    mEventBus.post(new StartTimerEvent(mSeconds, mMinutes));
+                    if (mMinutes > 0 || mSeconds > 0) {
+                        mEventBus.post(new StartTimerEvent(mSeconds, mMinutes));
+                    }
                 } else {
                     mEventBus.post(new StopTimerEvent());
                 }
@@ -194,9 +196,9 @@ public class TimerActivity extends Activity {
      * @param event Event data
      */
     public void onEvent(TimerAlarmEvent event) {
-        onResetTimer();
-
         Toast.makeText(this, R.string.timer_finished, Toast.LENGTH_SHORT).show();
+
+        onResetTimer();
     }
 
     /**

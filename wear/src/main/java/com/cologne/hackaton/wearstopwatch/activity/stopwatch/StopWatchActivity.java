@@ -57,7 +57,7 @@ public class StopWatchActivity extends Activity implements
     private EventBus eventBus = EventBus.getDefault();
 
     // Views
-    private TextView mIimeView;
+    private TextView mTimeView;
     private ImageButton mBtnStart;
     private ImageButton mBtnStop;
     private ImageButton mBtnLock;
@@ -112,7 +112,7 @@ public class StopWatchActivity extends Activity implements
                         @Override
                         public void onTick(long elapsedTime) {
                             String formattedTime = StringUtils.formatString(elapsedTime);
-                            mIimeView.setText(formattedTime);
+                            mTimeView.setText(formattedTime);
                         }
                     }));
             eventBus.post(new RequestStatusEvent());
@@ -192,7 +192,7 @@ public class StopWatchActivity extends Activity implements
      * Initializes view controls
      */
     private void initializeViews() {
-        mIimeView = (TextView) findViewById(R.id.tv_time);
+        mTimeView = (TextView) findViewById(R.id.tv_time);
 
         mLapsListView = (ListView) findViewById(R.id.lv_laps);
         mLapsAdapter = new LapAdapter(this, android.R.layout.simple_list_item_1,
@@ -245,7 +245,7 @@ public class StopWatchActivity extends Activity implements
                         public void onTick(long elapsedTime) {
 
                             String formattedTime = StringUtils.formatString(elapsedTime);
-                            mIimeView.setText(formattedTime);
+                            mTimeView.setText(formattedTime);
                         }
                     }));
 
@@ -266,7 +266,7 @@ public class StopWatchActivity extends Activity implements
                         @Override
                         public void receivePauseTime(long pauseTime) {
                             String formattedTime = StringUtils.formatString(pauseTime);
-                            mIimeView.setText(formattedTime);
+                            mTimeView.setText(formattedTime);
                         }
                     }));
 
